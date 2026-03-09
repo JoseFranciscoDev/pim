@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Produtos</title>
+  </head>
+  <body>
+    <h1>Lista de produtos</h1>
+
+    {% for produto in produtos %}
+
+    <div style="border: 1px solid #ccc; margin: 10px; padding: 10px">
+      <h3>Código: {{ produto.dados.0 }}</h3>
+      <p>Descrição: {{ produto.dados.1 }}</p>
+
+      {% for img in produto.imagens %}
+      <img src="{{ img.imagem.url }}" width="150" />
+      {% endfor %}
+    </div>
+
+    {% endfor %}
+  </body>
+</html>
