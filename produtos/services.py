@@ -34,14 +34,16 @@ class ProdutosService:
         connection.close()
         return resultado
 
-    def get_all_produtos(self) -> list[RowType]:
+    def get_all_produtos(self, todos_codigos_cadastrados) -> list[RowType]:
         """Retorna uma lista com linhas do resultado, cada linha é uma tupla"""
         connection = self.__connectar()
 
-        cursor = connection.cursor()
-        QUERY = "SELECT * FROM produtos"
+        cursor = connection.cursor(dictionary=True)
 
-        cursor.execute(QUERY)
+        placeholders = ",".join(["%s"] * len(todos_codigos_cadastrados))
+        QUERY = f"SELECT * FROM produtos where codigo_produto in ({placeholders})"
+
+        cursor.execute(QUERY, todos_codigos_cadastrados)
         resultado = cursor.fetchall()
 
         connection.close()
@@ -53,5 +55,3 @@ class ImagemService:
         self.image_name = image_name
         self.path = path
         self.create_at = create_at
-
-    
