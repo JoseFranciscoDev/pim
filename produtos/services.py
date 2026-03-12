@@ -35,7 +35,7 @@ class ProdutosService:
         return resultado
 
     def get_all_produtos(self, todos_codigos_cadastrados) -> list[RowType]:
-        """Retorna uma lista com linhas do resultado, cada linha é uma tupla"""
+        """Retorna um dicionario com o resultado"""
         connection = self.__connectar()
 
         cursor = connection.cursor(dictionary=True)

@@ -1,9 +1,9 @@
 from django.shortcuts import render
 from .services import ProdutosService
-from .models import ProdutoInfo, ProdutoImagem
+from .models import ProdutoInfo
 
 
-def listar_produtos(request):
+def exibir_catalogo(request):
     service = ProdutosService(
         host="localhost",
         port=3306,
@@ -12,55 +12,42 @@ def listar_produtos(request):
         database="produtos",
     )
 
-    produtos_internos = ProdutoInfo.objects.values_list("codigo", flat=True)
-    produtos_externos = service.get_all_produtos(
-        list(produtos_internos),
-    )
-    # imagens = ProdutoImagem.objects.filter(, "imagens": produtos_internos.imagens,)
-    return render(
-        request,
-        "produtos.html",
-        {
-            "produtos": produtos_externos,
-            "imagens": produtos_internos.imagens,
-        },
-    )
+    # 1. Busca produtos internos e já carrega as imagens (prefetch_related) para otimizar performance
+    produtos_internos = ProdutoInfo.objects.prefetch_related("imagens").all()
 
-    # # def listar_produtos(request):
-    # service = ProdutosService(
-    #     host="localhost",
-    #     port=3306,
-    #     user="root",
-    #     password="1234",
-    #     database="produtos",
-    # )
+    # 2. Cria um mapa {codigo: objeto_produto} para busca rápida
+    mapa_produtos = {p.codigo: p for p in produtos_internos}
 
-    # produtos_internos = ProdutoInfo.objects.prefetch_related("imagens")
+    codigos_para_buscar = list(mapa_produtos.keys())
 
-    # mapa_produtos = {p.codigo: p for p in produtos_internos}
+    # Se não houver produtos cadastrados, retorna lista vazia para evitar erro no SQL
+    if not codigos_para_buscar:
+        return render(request, "catalogo.html", {"produtos": []})
 
-    # produtos_externos = service.get_all_produtos(list(mapa_produtos.keys()))
+    # 3. Busca informações detalhadas no banco externo
+    # O service retorna uma lista de dicionários (pois dictionary=True no service)
+    produtos_externos = service.get_all_produtos(codigos_para_buscar)
+    print(produtos_externos)
 
-    # produtos = []
+    lista_final = []
 
-    # for p in produtos_externos:
-    #     codigo = p[0]
-    #     descricao = p[1]
+    # 4. Combina os dados
+    for item_externo in produtos_externos:
+        # Ajuste 'codigo_produto' conforme o nome da coluna no seu banco externo MySQL
+        codigo = item_externo.get("codigo_produto")
 
-    #     produto_local = mapa_produtos.get(codigo)
+        # Busca o objeto local correspondente
+        produto_local = mapa_produtos.get(str(codigo))
 
-    #     imagem = None
-    #     if produto_local:
-    #         img = produto_local.imagens.first()
-    #         if img:
-    #             imagem = img.imagem
+        imagem_url = None
+        if produto_local:
+            img = produto_local.imagens.first()  # Pega a primeira imagem associada
+            if img and img.imagem:
+                imagem_url = img.imagem.url
 
-    #     produtos.append(
-    #         {
-    #             "codigo_produto": codigo,
-    #             "descricao_produto": descricao,
-    #             "imagem": imagem,
-    #         }
-    #     )
+        # Adiciona a URL da imagem ao dicionário de dados do produto
+        item_externo.update({"imagem": imagem_url})
+        lista_final.append(item_externo)
+    print(lista_final)
 
-    # return render(request, "produtos.html", {"produtos": produtos})
+    return render(request, "catalogo.html", {"produtos": lista_final})

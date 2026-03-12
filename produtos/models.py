@@ -33,6 +33,8 @@ class ProdutoImagem(TimeStampModel):
 
     def __str__(self):
         return f"{self.produto.codigo} - imagem"
-
+    
+    
+    
 
 """Descrição, preço de venda, se está na promoção"""
